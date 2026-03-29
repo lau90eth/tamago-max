@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """
-bounty_scanner.py — fetch bounty targets da Code4rena (GitHub) e Cantina
+bounty_scanner.py — fetch bounty targets attivi
+Fonti: Code4rena (GitHub repos), Sherlock (API pubblica)
 """
 
 import requests
@@ -8,6 +9,8 @@ import json
 import subprocess
 from dataclasses import dataclass
 from datetime import datetime, timezone
+
+GITHUB_TOKEN = ""  # opzionale, aumenta rate limit
 
 @dataclass
 class BountyTarget:
@@ -17,69 +20,84 @@ class BountyTarget:
     reward_pool: str
     ends_at: str
 
+def github_headers():
+    h = {"Accept": "application/vnd.github.v3+json"}
+    if GITHUB_TOKEN:
+        h["Authorization"] = f"token {GITHUB_TOKEN}"
+    return h
+
 def fetch_code4rena() -> list[BountyTarget]:
-    """Legge i contest attivi dal repo GitHub ufficiale di Code4rena."""
+    """Cerca repo Code4rena attivi con pattern YYYY-MM-*"""
     targets = []
     try:
-        r = requests.get(
-            "https://api.github.com/repos/code-423n4/code423n4.com-_data/contents/contests",
-            headers={"Accept": "application/vnd.github.v3+json"},
-            timeout=10
-        )
-        files = r.json()
         now = datetime.now(timezone.utc)
+        year = now.year
+        month = now.month
 
-        for f in files:
-            if not f["name"].endswith(".json"):
-                continue
-            cr = requests.get(f["download_url"], timeout=10)
-            c = cr.json()
-
-            # Controlla se è attivo
-            end_str = c.get("end_time", "")
-            try:
-                end_dt = datetime.fromisoformat(end_str.replace("Z", "+00:00"))
-                if end_dt < now:
+        # Cerca repo del mese corrente e precedente
+        for y, m in [(year, month), (year, month-1 if month > 1 else 12)]:
+            prefix = f"2026-{m:02d}" if y == 2026 else f"{y}-{m:02d}"
+            r = requests.get(
+                f"https://api.github.com/orgs/code-423n4/repos",
+                params={"per_page": 100, "sort": "created", "direction": "desc"},
+                headers=github_headers(),
+                timeout=10
+            )
+            if r.status_code != 200:
+                break
+            repos = r.json()
+            for repo in repos:
+                name = repo.get("name", "")
+                if not name.startswith(prefix):
                     continue
-            except:
-                continue
-
-            repo = c.get("repo", "")
-            targets.append(BountyTarget(
-                platform="code4rena",
-                name=c.get("title", f["name"]),
-                repo_url=repo,
-                reward_pool=str(c.get("amount", "?")),
-                ends_at=end_str
-            ))
+                # Repo attivo = creato di recente e non archiviato
+                if repo.get("archived"):
+                    continue
+                targets.append(BountyTarget(
+                    platform="code4rena",
+                    name=name,
+                    repo_url=repo.get("html_url", ""),
+                    reward_pool="?",
+                    ends_at=repo.get("created_at", "")
+                ))
     except Exception as e:
         print(f"[code4rena] error: {e}")
     return targets
 
-def fetch_cantina() -> list[BountyTarget]:
-    """Scrapa bounty attivi da Cantina."""
+def fetch_sherlock() -> list[BountyTarget]:
+    """Fetch contest attivi da Sherlock."""
     targets = []
     try:
         r = requests.get(
-            "https://cantina.xyz/api/competitions",
-            params={"status": "open"},
+            "https://mainnet-contest.sherlock.xyz/contests",
             timeout=10
         )
         if r.status_code != 200:
-            print(f"[cantina] HTTP {r.status_code}")
+            print(f"[sherlock] HTTP {r.status_code}")
             return targets
-        data = r.json()
-        for c in data.get("competitions", data if isinstance(data, list) else []):
-            repo = c.get("repoUrl") or c.get("repo_url") or c.get("repo") or ""
+        contests = r.json()
+        now = datetime.now(timezone.utc)
+        for c in contests:
+            # Filtra solo attivi
+            ends = c.get("ends_at", "")
+            try:
+                end_dt = datetime.fromisoformat(ends.replace("Z", "+00:00"))
+                if end_dt < now:
+                    continue
+            except:
+                pass
+            repo = c.get("template_repo_name", "")
+            if repo:
+                repo = f"https://github.com/sherlock-audit/{repo}"
             targets.append(BountyTarget(
-                platform="cantina",
-                name=c.get("name") or c.get("title") or "",
+                platform="sherlock",
+                name=c.get("title", ""),
                 repo_url=repo,
-                reward_pool=str(c.get("prizePool") or c.get("prize_pool") or "?"),
-                ends_at=c.get("endDate") or c.get("end_date") or ""
+                reward_pool=str(c.get("prize_pool", "?")),
+                ends_at=ends
             ))
     except Exception as e:
-        print(f"[cantina] error: {e}")
+        print(f"[sherlock] error: {e}")
     return targets
 
 def analyze_with_recon0(repo_url: str) -> dict | None:
@@ -101,26 +119,24 @@ def analyze_with_recon0(repo_url: str) -> dict | None:
 
 def scan_all():
     print("Fetching active bounties...")
-    targets = fetch_code4rena() + fetch_cantina()
+    targets = fetch_code4rena() + fetch_sherlock()
     print(f"Found {len(targets)} active targets\n")
+
+    for t in targets:
+        print(f"  [{t.platform}] {t.name} | ${t.reward_pool} | {t.repo_url}")
 
     results = []
     for t in targets:
-        print(f"  [{t.platform}] {t.name} | ${t.reward_pool} | ends: {t.ends_at}")
         if not t.repo_url:
-            print(f"    SKIP — no repo URL")
             continue
-
-        print(f"    Analyzing: {t.repo_url}")
+        print(f"\nAnalyzing: {t.name}")
         analysis = analyze_with_recon0(t.repo_url)
         if not analysis:
             continue
-
         score = analysis.get("score", {}).get("score", 0)
         findings = analysis.get("findings", [])
         highs = [f for f in findings if f.get("severity") == "high"]
-        print(f"    Score: {score}/100 | Findings: {len(findings)} ({len(highs)} HIGH)")
-
+        print(f"  Score: {score}/100 | {len(highs)} HIGH findings")
         results.append({
             "target": t.__dict__,
             "analysis": analysis,
@@ -128,18 +144,9 @@ def scan_all():
         })
 
     results.sort(key=lambda x: x["priority"], reverse=True)
-
     with open("bounty_scan_results.json", "w") as f:
         json.dump(results, f, indent=2)
-    print(f"\nSaved {len(results)} results to bounty_scan_results.json")
-
-    if results:
-        print("\nTop targets:")
-        for r in results[:3]:
-            t = r["target"]
-            s = r["analysis"]["score"]["score"]
-            print(f"  {t['name']} — score {s}/100 — ${t['reward_pool']}")
-
+    print(f"\nSaved {len(results)} analyzed targets")
     return results
 
 if __name__ == "__main__":
