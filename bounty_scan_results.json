@@ -1,1 +1,336 @@
-[]
+[
+  {
+    "target": {
+      "platform": "code4rena",
+      "name": "2026-02-jupiter-lend",
+      "repo_url": "https://github.com/code-423n4/2026-02-jupiter-lend",
+      "reward_pool": "?",
+      "ends_at": "2026-02-11T13:39:19Z"
+    },
+    "analysis": {
+      "project": "2026-02-jupiter-lend",
+      "url": "https://github.com/code-423n4/2026-02-jupiter-lend",
+      "summary": {
+        "high": 2,
+        "medium": 9,
+        "low": 0,
+        "info": 0
+      },
+      "score": {
+        "score": 76,
+        "label": "Critical",
+        "color": "#E24B4A",
+        "breakdown": [
+          {
+            "label": "2 HIGH finding(s)",
+            "delta": 40,
+            "reason": "2 \u00d7 20 pts (cap 60)"
+          },
+          {
+            "label": "9 MEDIUM finding(s)",
+            "delta": 24,
+            "reason": "9 \u00d7 8 pts (cap 24)"
+          },
+          {
+            "label": "Vulnerable deps",
+            "delta": 10,
+            "reason": "cargo audit found known CVEs"
+          },
+          {
+            "label": "Tests present",
+            "delta": -3,
+            "reason": "test suite found"
+          },
+          {
+            "label": "1 high-risk pattern(s)",
+            "delta": 5,
+            "reason": "delegatecall / selfdestruct / tx.origin"
+          }
+        ],
+        "flags": {
+          "cargo_vulns": true
+        },
+        "counts": {
+          "high": 2,
+          "medium": 9,
+          "low": 0,
+          "info": 0
+        }
+      },
+      "findings": [
+        {
+          "check": "cargo-audit:RUSTSEC-2026-0007",
+          "severity": "medium",
+          "confidence": "High",
+          "description": "Integer overflow in `BytesMut::reserve` \u2014 https://github.com/advisories/GHSA-434x-w66g-qw3r",
+          "location": "bytes"
+        },
+        {
+          "check": "cargo-audit:RUSTSEC-2024-0344",
+          "severity": "medium",
+          "confidence": "High",
+          "description": "Timing variability in `curve25519-dalek`'s `Scalar29::sub`/`Scalar52::sub` \u2014 https://github.com/dalek-cryptography/curve25519-dalek/pull/659",
+          "location": "curve25519-dalek"
+        },
+        {
+          "check": "cargo-audit:RUSTSEC-2022-0093",
+          "severity": "medium",
+          "confidence": "High",
+          "description": "Double Public Key Signing Function Oracle Attack on `ed25519-dalek` \u2014 https://github.com/MystenLabs/ed25519-unsafe-libs",
+          "location": "ed25519-dalek"
+        },
+        {
+          "check": "cargo-audit:RUSTSEC-2026-0037",
+          "severity": "high",
+          "confidence": "High",
+          "description": "Denial of service in Quinn endpoints \u2014 https://github.com/quinn-rs/quinn/pull/2559",
+          "location": "quinn-proto"
+        },
+        {
+          "check": "cargo-audit:RUSTSEC-2026-0049",
+          "severity": "medium",
+          "confidence": "High",
+          "description": "CRLs not considered authoritative by Distribution Point due to faulty matching logic \u2014 None",
+          "location": "rustls-webpki"
+        },
+        {
+          "check": "cargo-audit:RUSTSEC-2026-0009",
+          "severity": "high",
+          "confidence": "High",
+          "description": "Denial of Service via Stack Exhaustion \u2014 https://github.com/time-rs/time/blob/main/CHANGELOG.md#0347-2026-02-05",
+          "location": "time"
+        },
+        {
+          "check": "clippy:clippy::empty_line_after_doc_comments",
+          "severity": "medium",
+          "confidence": "High",
+          "description": "error: empty line after doc comment\n --> crates/library/src/math/bn.rs:6:1\n  |\n6 | / /// @notice this is an optimized version mainly created by taking Fluid vault's codebase into consideration so it's use is limited for ot...\n7 | |\n  | |_^\n8 |   const COEFFICIENT_SIZE_DEBT_FACTOR: u8 = 35;\n  |   ---",
+          "location": "crates/library/src/math/bn.rs:8"
+        },
+        {
+          "check": "clippy:clippy::manual_range_contains",
+          "severity": "medium",
+          "confidence": "High",
+          "description": "error: manual `RangeInclusive::contains` implementation\n  --> crates/library/src/math/tick.rs:64:13\n   |\n64 |             tick >= Self::MIN_TICK && tick <= Self::MAX_TICK,\n   |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: use: `(Self::MIN_TICK..=Self::MAX_TICK).contains(&tick)`",
+          "location": "crates/library/src/math/tick.rs:64"
+        },
+        {
+          "check": "clippy:clippy::cast_abs_to_unsigned",
+          "severity": "medium",
+          "confidence": "High",
+          "description": "error: casting the result of `i32::abs()` to u32\n  --> crates/library/src/math/tick.rs:68:24\n   |\n68 |         let abs_tick = tick.abs() as u32;\n   |                        ^^^^^^^^^^^^^^^^^ help: replace with: `tick.unsigned_abs()`\n   |\n   = help: for further information visit https://rust-lang.git",
+          "location": "crates/library/src/math/tick.rs:68"
+        },
+        {
+          "check": "clippy:clippy::manual_range_contains",
+          "severity": "medium",
+          "confidence": "High",
+          "description": "error: manual `RangeInclusive::contains` implementation\n   --> crates/library/src/math/tick.rs:142:13\n    |\n142 |             ratio_x48 >= Self::MIN_RATIOX48 && ratio_x48 <= Self::MAX_RATIOX48,\n    |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: use: `(Self::MI",
+          "location": "crates/library/src/math/tick.rs:142"
+        },
+        {
+          "check": "clippy:clippy::needless_question_mark",
+          "severity": "medium",
+          "confidence": "High",
+          "description": "error: enclosing `Ok` and `?` operator are unneeded\n   --> crates/library/src/math/tick.rs:250:9\n    |\n250 |         Ok(mul_u256(n0, n1).shift_right(64).try_into_u128()?)\n    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n    |\n    = help: for further information visit https://rust-",
+          "location": "crates/library/src/math/tick.rs:250"
+        }
+      ]
+    },
+    "priority": 96
+  },
+  {
+    "target": {
+      "platform": "code4rena",
+      "name": "2026-02-injective",
+      "repo_url": "https://github.com/code-423n4/2026-02-injective",
+      "reward_pool": "?",
+      "ends_at": "2026-02-11T23:27:54Z"
+    },
+    "analysis": {
+      "project": "2026-02-injective",
+      "url": "https://github.com/code-423n4/2026-02-injective",
+      "summary": {
+        "high": 0,
+        "medium": 0,
+        "low": 0,
+        "info": 0
+      },
+      "score": {
+        "score": 61,
+        "label": "High",
+        "color": "#EF9F27",
+        "breakdown": [
+          {
+            "label": "Proxy/upgradeable",
+            "delta": 15,
+            "reason": "upgrade pattern detected \u2014 admin key risk"
+          },
+          {
+            "label": "Tests present",
+            "delta": -3,
+            "reason": "test suite found"
+          },
+          {
+            "label": "Upgrade pattern present",
+            "delta": 5,
+            "reason": "3 upgrade pattern(s)"
+          },
+          {
+            "label": "6 unguarded fund function(s)",
+            "delta": 24,
+            "reason": "fund-moving functions with no access control"
+          },
+          {
+            "label": "3 high-risk pattern(s)",
+            "delta": 15,
+            "reason": "delegatecall / selfdestruct / tx.origin"
+          },
+          {
+            "label": "Multiple external calls",
+            "delta": 5,
+            "reason": "9 external calls detected"
+          }
+        ],
+        "flags": {
+          "proxy_detected": true
+        },
+        "counts": {
+          "high": 0,
+          "medium": 0,
+          "low": 0,
+          "info": 0
+        }
+      },
+      "findings": []
+    },
+    "priority": 61
+  },
+  {
+    "target": {
+      "platform": "code4rena",
+      "name": "2026-03-intuition",
+      "repo_url": "https://github.com/code-423n4/2026-03-intuition",
+      "reward_pool": "?",
+      "ends_at": "2026-02-16T15:57:07Z"
+    },
+    "analysis": {
+      "project": "2026-03-intuition",
+      "url": "https://github.com/code-423n4/2026-03-intuition",
+      "summary": {
+        "high": 0,
+        "medium": 0,
+        "low": 0,
+        "info": 0
+      },
+      "score": {
+        "score": 51,
+        "label": "High",
+        "color": "#EF9F27",
+        "breakdown": [
+          {
+            "label": "Build failed",
+            "delta": 10,
+            "reason": "forge/cargo build error"
+          },
+          {
+            "label": "Proxy/upgradeable",
+            "delta": 15,
+            "reason": "upgrade pattern detected \u2014 admin key risk"
+          },
+          {
+            "label": "Tests present",
+            "delta": -3,
+            "reason": "test suite found"
+          },
+          {
+            "label": "Prior audit found",
+            "delta": -5,
+            "reason": "audit/ directory or PDF in repo"
+          },
+          {
+            "label": "Upgrade pattern present",
+            "delta": 5,
+            "reason": "2 upgrade pattern(s)"
+          },
+          {
+            "label": "4 unguarded fund function(s)",
+            "delta": 24,
+            "reason": "fund-moving functions with no access control"
+          },
+          {
+            "label": "1 high-risk pattern(s)",
+            "delta": 5,
+            "reason": "delegatecall / selfdestruct / tx.origin"
+          }
+        ],
+        "flags": {
+          "build_failed": true,
+          "proxy_detected": true,
+          "audit_present": true
+        },
+        "counts": {
+          "high": 0,
+          "medium": 0,
+          "low": 0,
+          "info": 0
+        }
+      },
+      "findings": []
+    },
+    "priority": 51
+  },
+  {
+    "target": {
+      "platform": "code4rena",
+      "name": "2026-03-chainlink",
+      "repo_url": "https://github.com/code-423n4/2026-03-chainlink",
+      "reward_pool": "?",
+      "ends_at": "2026-03-03T17:44:16Z"
+    },
+    "analysis": {
+      "project": "2026-03-chainlink",
+      "url": "https://github.com/code-423n4/2026-03-chainlink",
+      "summary": {
+        "high": 0,
+        "medium": 0,
+        "low": 0,
+        "info": 0
+      },
+      "score": {
+        "score": 2,
+        "label": "Minimal",
+        "color": "#639922",
+        "breakdown": [
+          {
+            "label": "Build failed",
+            "delta": 10,
+            "reason": "forge/cargo build error"
+          },
+          {
+            "label": "Tests present",
+            "delta": -3,
+            "reason": "test suite found"
+          },
+          {
+            "label": "Prior audit found",
+            "delta": -5,
+            "reason": "audit/ directory or PDF in repo"
+          }
+        ],
+        "flags": {
+          "build_failed": true,
+          "audit_present": true
+        },
+        "counts": {
+          "high": 0,
+          "medium": 0,
+          "low": 0,
+          "info": 0
+        }
+      },
+      "findings": []
+    },
+    "priority": 2
+  }
+]
